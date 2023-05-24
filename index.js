@@ -39,12 +39,6 @@ async function run() {
 
 run();
 
-// app.get("/", (req, res) => {
-//   return res.json({
-//     message: "hello!",
-//   });
-// });
-
 app.post("/login", async (req, res) => {
   await client.connect();
   const db = client.db("Users");
@@ -85,7 +79,6 @@ app.post("/signup", async (req, res) => {
             _id: new ObjectId(req.body.favSchools[i]),
           })
           .then((school) => {
-            console.log("School: ", school);
             if (school) {
               arr.push(school);
             }
@@ -94,7 +87,6 @@ app.post("/signup", async (req, res) => {
       return arr;
     };
     const modifiedSchools = await modifySchools();
-    console.log("modified schools: ", modifiedSchools);
     const users = client.db("Users").collection("Users");
     const foundUser = await users
       .findOne({
@@ -182,7 +174,6 @@ app.patch("/profile", async (req, res) => {
 });
 
 app.get("/profile", async (req, res) => {
-  console.log("query: ", req.query.query);
   try {
     client.connect();
     const users = client.db("Users").collection("Users");
@@ -282,8 +273,6 @@ app.get("/schools/:id", async (req, res) => {
             reviews: indivPlReviews,
           });
         }
-        console.log("School places: ", schoolPlaces);
-        console.log("Reviews: ", placeReviews);
         return res.status(200).send({ school, places: placeReviews });
       });
   } catch (err) {
@@ -316,7 +305,6 @@ app.post("/places", async (req, res) => {
       `https://api.mapbox.com/geocoding/v5/mapbox.places/${fullAddress}.json?proximity=ip&access_token=${token}`
     )
     .then(async (data) => {
-      console.log("mapbox data: ", data);
       const coordinates = data.data.features[0].geometry.coordinates;
 
       await client.connect();
@@ -326,15 +314,12 @@ app.post("/places", async (req, res) => {
         Longitude: coordinates[0],
       });
       if (!existingPlace) {
-        console.log("Place does not exist already!");
         const schools = client.db("Schools").collection("Schools");
-        console.log("School: ", school);
         const currSchool = await schools.findOne({
           _id: new ObjectId(school._id),
         });
         const users = client.db("Users").collection("Users");
         const user = await users.findOne({ _id: new ObjectId(creator) });
-        console.log("User: ", user);
 
         // Calculate the distance between the coordinates and the school's coordinates
         const distance = haversineDistance(
@@ -345,7 +330,6 @@ app.post("/places", async (req, res) => {
         );
 
         if (distance > 20) {
-          console.log("Too far!");
           return res
             .status(400)
             .send({ message: "This place is too far away from the school" });
@@ -403,7 +387,6 @@ app.patch("/places/:id", async (req, res) => {
     const places = client.db("Places").collection("Places");
     const schools = client.db("Schools").collection("Schools");
     const existingPlace = await places.findOne({ _id: new ObjectId(id) });
-    console.log("Existing place: ", existingPlace);
     let newCoordinates = null;
     if (fullAddress !== existingPlace.Address) {
       await axios
@@ -413,7 +396,6 @@ app.patch("/places/:id", async (req, res) => {
         .then((data) => {
           newCoordinates = data.data.features[0].geometry.coordinates;
         });
-      console.log("new coordinates: ", newCoordinates);
     }
     await places.updateOne(
       { _id: new ObjectId(id) },
@@ -452,7 +434,6 @@ app.get("/places/:id", async (req, res) => {
           "place._id": new ObjectId(req.params.id),
         });
         placeReviews = await placeReviews.toArray();
-        console.log("Place reviews: ", placeReviews);
         return res.status(200).send({ place, reviews: placeReviews });
       } else {
         return res
@@ -486,7 +467,6 @@ app.get("/reviews/:placeId", async (req, res) => {
 app.post("/reviews", async (req, res) => {
   try {
     const review = req.body;
-    console.log("Review: ", review);
     await client.connect();
     const reviews = client.db("Reviews").collection("Reviews");
     const users = client.db("Users").collection("Users");
@@ -541,7 +521,6 @@ app.patch("/reviews", async (req, res) => {
   try {
     await client.connect();
     const clientReview = req.body;
-    console.log("clientReview: ", clientReview);
     const reviews = client.db("Reviews").collection("Reviews");
     const users = client.db("Users").collection("Users");
     const author = await users.findOne({
@@ -706,16 +685,12 @@ app.post("/reset-password", async (req, res) => {
   const transporter = nodemailer.createTransport(smtpConfig);
   transporter.verify(function (error, success) {
     if (error) {
-      console.log("verify error: ", error);
-    } else {
-      console.log("Server is ready to send!");
+      throw new Error();
     }
   });
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
-      console.log("Error sending email: ", error);
-    } else {
-      console.log("Email sent successfully: ", info.response);
+      throw new Error();
       return res.status(200).send({ message: "Email sent successfully!" });
     }
   });
