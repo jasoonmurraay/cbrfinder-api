@@ -8,6 +8,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 
+const PORT = process.env.PORT || 5000;
+
 require("dotenv").config();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -763,6 +765,6 @@ app.patch("/password", async (req, res) => {
     });
 });
 
-app.listen(5000, () => {
-  console.log("listening on port 5000...");
+app.listen(PORT, () => {
+  console.log(`listening on port ${PORT}...`);
 });
