@@ -246,7 +246,19 @@ app.get("/schools", async (req, res) => {
       .find({}, projection)
       .sort({ CommonName: 1 })
       .toArray();
-    return res.status(200).send(allSchools);
+    let modifiedSchools = [];
+    for (let i = 0; i < allSchools.length; i++) {
+      let school = allSchools[i];
+      modifiedSchools.push({
+        _id: school._id,
+        FullName: school.FullName,
+        CommonName: school.CommonName,
+        PrimaryConference: school.PrimaryConference,
+        City: school.City,
+        State: school.State,
+      });
+    }
+    return res.status(200).send(modifiedSchools);
   } catch (err) {
     return res
       .status(400)
