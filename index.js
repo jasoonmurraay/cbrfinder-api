@@ -239,6 +239,8 @@ app.get("/schools", async (req, res) => {
       "school._id": 1,
       "school.City": 1,
       "school.State": 1,
+      "school.PrimaryConference": 1,
+      "school.FullName": 1,
     };
     const allSchools = await schools
       .find({}, projection)
