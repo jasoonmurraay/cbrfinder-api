@@ -658,65 +658,68 @@ app.put("/favorites", async (req, res) => {
 });
 
 app.post("/reset-password", async (req, res) => {
-  const userEmail = req.body.email;
-  await client.connect();
-  const users = client.db("Users").collection("Users");
-  const hashes = client.db("Hash").collection("Hash");
-  const user = await users.findOne({ email: userEmail });
-  if (!user) {
-    return res
-      .status(400)
-      .send({ message: "No user is associated with that email address." });
+  try {
+    const userEmail = req.body.email;
+    await client.connect();
+    const users = client.db("Users").collection("Users");
+    const hashes = client.db("Hash").collection("Hash");
+    const user = await users.findOne({ email: userEmail });
+    if (!user) {
+      return res
+        .status(400)
+        .send({ message: "No user is associated with that email address." });
+    }
+    const generateHash = () => {
+      const timestamp = new Date().getTime().toString();
+      const randomString = crypto.randomBytes(16).toString("hex");
+      const hash = crypto
+        .createHash("md5")
+        .update(timestamp + randomString)
+        .digest("hex");
+      const expirationTime = new Date(Date.now() + 30 * 60000); // Set expiration time to 30 minutes from now
+      return { hash, expirationTime };
+    };
+    const { hash, expirationTime } = generateHash();
+    await hashes.insertOne({
+      email: userEmail,
+      hash,
+      expirationTime,
+    });
+    const resetLink = `http://localhost:3000/reset-password?hash=${hash}`;
+    const mailOptions = {
+      from: process.env.GMAIL_ADDRESS,
+      to: userEmail,
+      subject: "Reset Your Password",
+      text: `We received a request for your password to be changed.  Click the following link to change your password: ${resetLink}`,
+    };
+    const smtpConfig = {
+      service: "gmail",
+      port: 465,
+      host: "smtp.gmail.com",
+      secure: true,
+      auth: {
+        type: "OAuth2",
+        user: process.env.GMAIL_ADDRESS,
+        clientId: process.env.GMAIL_CLIENT_ID,
+        clientSecret: process.env.GMAIL_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      },
+    };
+    const transporter = nodemailer.createTransport(smtpConfig);
+    transporter.verify(function (error, success) {
+      if (error) {
+        throw new Error();
+      }
+    });
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        throw new Error();
+      }
+    });
+    return res.status(200).send({ message: "Email sent successfully!" });
+  } catch {
+    return res.status(500).send({ message: "Internal server error." });
   }
-  const generateHash = () => {
-    const timestamp = new Date().getTime().toString();
-    const randomString = crypto.randomBytes(16).toString("hex");
-    const hash = crypto
-      .createHash("md5")
-      .update(timestamp + randomString)
-      .digest("hex");
-    const expirationTime = new Date(Date.now() + 30 * 60000); // Set expiration time to 30 minutes from now
-    return { hash, expirationTime };
-  };
-  const { hash, expirationTime } = generateHash();
-  await hashes.insertOne({
-    email: userEmail,
-    hash,
-    expirationTime,
-  });
-  const resetLink = `http://localhost:3000/reset-password?hash=${hash}`;
-  const mailOptions = {
-    from: process.env.GMAIL_ADDRESS,
-    to: userEmail,
-    subject: "Reset Your Password",
-    text: `We received a request for your password to be changed.  Click the following link to change your password: ${resetLink}`,
-  };
-  const smtpConfig = {
-    service: "gmail",
-    port: 465,
-    host: "smtp.gmail.com",
-    secure: true,
-    auth: {
-      type: "OAuth2",
-      user: process.env.GMAIL_ADDRESS,
-      clientId: process.env.GMAIL_CLIENT_ID,
-      clientSecret: process.env.GMAIL_CLIENT_SECRET,
-      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-    },
-  };
-  const transporter = nodemailer.createTransport(smtpConfig);
-  transporter.verify(function (error, success) {
-    if (error) {
-      throw new Error();
-    }
-  });
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      throw new Error();
-      return res.status(200).send({ message: "Email sent successfully!" });
-    }
-  });
-  return res.status(500).send({ message: "Internal server error." });
 });
 
 app.get("/hash/:id", async (req, res) => {
