@@ -233,9 +233,17 @@ app.delete("/profile", async (req, res) => {
 
 app.get("/schools", async (req, res) => {
   try {
-    client.connect();
     const schools = client.db("Schools").collection("Schools");
-    const allSchools = await schools.find({}).sort({ CommonName: 1 }).toArray();
+    const projection = {
+      CommonName: 1,
+      "school._id": 1,
+      "school.City": 1,
+      "school.State": 1,
+    };
+    const allSchools = await schools
+      .find({}, projection)
+      .sort({ CommonName: 1 })
+      .toArray();
     return res.status(200).send(allSchools);
   } catch (err) {
     return res
