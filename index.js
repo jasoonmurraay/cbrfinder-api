@@ -236,11 +236,11 @@ app.get("/schools", async (req, res) => {
     const schools = client.db("Schools").collection("Schools");
     const projection = {
       CommonName: 1,
-      "school._id": 1,
-      "school.City": 1,
-      "school.State": 1,
-      "school.PrimaryConference": 1,
-      "school.FullName": 1,
+      _id: 1,
+      City: 1,
+      State: 1,
+      PrimaryConference: 1,
+      FullName: 1,
     };
     const allSchools = await schools
       .find({}, projection)
